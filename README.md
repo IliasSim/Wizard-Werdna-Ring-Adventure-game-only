@@ -1,7 +1,7 @@
-# **Wizard Werdna Ring**
+# **The Ring of the Wizard Werdna**
 The code is written in python and creates a rogulike game.
 
-- [**Wizard Werdna Ring**](#wizard-werdna-ring)
+- [**The Ring of the Wizard Werdna**](#wizard-werdna-ring)
   - [**Scope**](#scope)
   - [**Caves/Enviroment**](#cavesenviroment)
   - [**Hero**](#hero)
@@ -28,7 +28,7 @@ The code is written in python and creates a rogulike game.
   - [**Summary**](#summary)
 
 ## **Scope**
-Main goal of the game is the hero to find the Wizard Werdna Ring. To achieve this the hero searches a cave complex. Each cave is inhabited by hostile creatures ready to attack our hero. The ring is located at the tenth and final cave.
+Main goal of the game is the hero to find the Ring the Wizard Werdna. To achieve this the hero searches a cave complex. Each cave is inhabited by hostile creatures ready to attack our hero. The ring is located at the tenth and final cave.
 
 ## **Caves/Enviroment**
 The environment of the game consists of caves, each cave is a 2d space of tiles. The tiles occupy 12x12 pixels on the screen and can be floor type (where the hero and the enemies can walk), wall type or stair type. The stair type tile is the entrance for the next cave. The color for each tile is red for the floor, black for the wall and pink for the stair. Each cave is randomly created every time the hero enters in it. The procedure used is a simple (in implementation) algorithm for creating dungeons of a rogue-like game. The algorithm name is “random-walk”, and it has been used in many rogue-like games. The way it works is the following, let assume that the cave consists of an N × M grid of tiles and all the tiles are characterized as walls. Then a percentage of tiles that will be the floor (on which the player and the opponents can move) is set, the algorithm starts from a random point and perform a random walk characterizing each grid it “steps” as floor until, the desired percentage is reached. An example of a cave depiction can be seen Figure 1.
@@ -40,11 +40,11 @@ The environment of the game consists of caves, each cave is a 2d space of tiles.
 For the hero of the game the player can choose between two types of characters warrior and wizard. The hero character is chosen at the first screen of the game by pressing 1 for the warrior type and 2 for the wizard. A screenshot of the introductory screen is given in Figure 2. 
 
 ![Wizard_Werdna_Ring](images/Wizard_Werdna_Ring.png)
-*Figure 2: Wizard Werdna Ring introductory screen.*
+*Figure 2: The ring of the Wizard Werdna, introductory screen.*
 
 The player can choose their hero's name by typing the desired name on the second screen of the game and pressing enter. Figure 3 shows the second screen of the game.
 ![Wizard_Werdna_Ring_Name](images/Wizard_Werdna_Ring_Name.png)
-*Figure 3: Wizard Werdna Ring name selection screen.*
+*Figure 3: The ring of the Wizard Werdna, name selection screen.*
 ### **Hero Depiction**
 The Hero is depicted as a blue square. Figure 4 shows an example of the hero depiction.
 
@@ -125,7 +125,7 @@ Table 3:Enemies of the Game
 
 ## **Items**
 
-In the game, tiles can have items stored on them, the two main item categories are potions and weapons. There is also a special item the Werdna Ring, which will be detailed below.
+In the game, tiles can have items stored on them, the two main item categories are potions and weapons. There is also a special item the ring of the Wizard Werdna, which will be detailed below.
 
 ### **Potions**
 Potions are used to restore the hero's HP and MP. The health potion restores the hero's HP up to 20 HP. The mana potion is only used by a wizard type hero and restores the hero's MP up to 20 MP. Potions are acquired by the hero automatically when he passes a tile on which they are stored. The maximum amount of potions a hero can have is 30 potions.
@@ -154,7 +154,7 @@ Items are depicted as a small square at the corner of the tile they are stored o
 ![Wizard_Werdna_Ring_health_potion](images/Wizard_Werdna_Ring_health_potion.png) ![Wizard_Werdna_Ring_mana_potion](images/Wizard_Werdna_Ring_mana_potion.png) ![Wizard_Werdna_Ring_weapon](images/Wizard_Werdna_Ring_weapon.png)
 
 *Figure 7: Health potion illustration (left), Mana potion illustration (center) weapon illustration (right)*
-#### *Werdna ring*
+#### **The ring of the Wizard Werdna**
 This is a special item. It is the item for which our hero begins his adventure. When the item is found and picked by the hero the game ends. The depiction of the ring is the same with the stairs (a pink tile).
 
 ## **Hero Status**
