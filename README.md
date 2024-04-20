@@ -22,9 +22,10 @@ The code is written in python and creates a rogulike game.
       - [**Sword**](#sword)
       - [**Staff**](#staff)
       - [**Item Depiction**](#item-depiction)
-      - [*Werdna ring*](#werdna-ring)
+      - [**Werdna ring**](#werdna-ring)
   - [**Hero Status**](#hero-status)
   - [**Game Log**](#game-log)
+  - [**Aditional features**](#features)
   - [**Summary**](#summary)
 
 ## **Scope**
@@ -170,6 +171,8 @@ The game log is displayed in the lower left corner of the screen below the map s
 ![Wizard_Werdna_Ring_game_log](images/Wizard_Werdna_Ring_game_log.png)
 
 *Figure 9: An example of the game log*
+
+## **features**
 
 ## **Summary**
 This game will be used for the development of artificial inteligence (AI) agent. The agent will play the game from the Hero prespective.
