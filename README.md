@@ -25,8 +25,7 @@ The code is written in python and creates a rogulike game.
       - [**Werdna ring**](#werdna-ring)
   - [**Hero Status**](#hero-status)
   - [**Game Log**](#game-log)
-  - [**Aditional features**](#features)
-  - [**Summary**](#summary)
+  - [**Summary and Aditional features**](#Summary and Aditional features)
 
 ## **Scope**
 Main goal of the game is the hero to find the Ring the Wizard Werdna. To achieve this the hero searches a cave complex. Each cave is inhabited by hostile creatures ready to attack our hero. The ring is located at the tenth and final cave.
@@ -172,7 +171,6 @@ The game log is displayed in the lower left corner of the screen below the map s
 
 *Figure 9: An example of the game log*
 
-## **features**
 
-## **Summary**
+## **Summary and Aditional features**
 This game will be used for the development of artificial inteligence (AI) agent. The agent will play the game from the Hero prespective.
