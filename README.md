@@ -27,6 +27,9 @@ The code is written in python and creates a rogulike game.
   - [**Game Log**](#game-log)
   - [**Summary and Aditional features**](#summary-and-aditional-features)
     - [**Screen factor**](#screen-factor)
+    - [**Depiction**](#depiction)
+    - [**Keyboard inputs**](#keyboard-inputs)
+    - [**Seed and game version**](#seed-and-game-version)
 
 ## **Scope**
 Main goal of the game is the hero to find the Ring the Wizard Werdna. To achieve this the hero searches a cave complex. Each cave is inhabited by hostile creatures ready to attack our hero. The ring is located at the tenth and final cave.
@@ -176,7 +179,16 @@ The game log is displayed in the lower left corner of the screen below the map s
 ## **Summary and Aditional features**
 This game will be used to develop artificial intelligence (AI) agent. The agent will play the game from the perspective of the Hero. For this reason additional features were introduced. which will be detailed below.
 ### **Screen factor**
-This feature is used to rescale the game screen, which is vital in order to keep the resources consumption (memory,CPU or GPU usage) low.The choises are the following
+This feature is used to rescale the game screen, which is crucial in order to keep resource consumption (memory, CPU or GPU usage) low. The options are as follows
 - 3 which offer no rescale
--  1 which shrinks the screen three times
--  0.5 which shrinks the screen six times.
+- 1 which shrinks the screen three times
+- 0.5 which shrinks the screen six times.
+The GamePAI class argument that define the screen factor is the "screenfactor"
+### **Depiction**
+This feature offers the option to show the game screen or not during agent training. The GamePAI class argument that defines the screen rendering is "depicts" and takes a boolean value, "True" the screen is rendered and "False" not  
+### **Keyboard inputs**
+This feature determines whether the game will be played by a human via keyboard inputs or by an AI agent. The GamePAI class argument that defines it is "playHP" and Takes boolean values, "True" allows a human to play and "False" allows an AI agent to play.
+### **Seed and game version**
+Generally, in a rogue-like game, every time a game starts, all aspects are randomly generated. The seed feature allows the same version of a game to be played. The GamePAI class argument that defines it is "seeded" and takes boolean values, "True" allows a specific version of the game to be played, "False" results in random game versions being generated. Even with the "seeded" argument to be "True"  is able to create several stable versions of the game. This is able through the GamePAI class argument "game" which take integer values. For example every time we start a game with "seeded" equal to "true" and "game" equal to 1 we will play the exact same game, if we choose "game" equal to two a new version of the game will be created, a version that we can replay every time we want, if the "seeded" is equal to "true" and the "game" equal to 2.
+ 
+
