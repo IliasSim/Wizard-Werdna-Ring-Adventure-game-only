@@ -1,7 +1,7 @@
 # **The Ring of the Wizard Werdna**
 The code is written in python and creates a rogulike game.
 
-- [**The Ring of the Wizard Werdna**](#wizard-werdna-ring)
+- [**The Ring of the Wizard Werdna**](#the-ring-of-the-wizard-werdna)
   - [**Scope**](#scope)
   - [**Caves/Enviroment**](#cavesenviroment)
   - [**Hero**](#hero)
@@ -22,10 +22,11 @@ The code is written in python and creates a rogulike game.
       - [**Sword**](#sword)
       - [**Staff**](#staff)
       - [**Item Depiction**](#item-depiction)
-      - [**Werdna ring**](#werdna-ring)
+      - [**The ring of the Wizard Werdna**](#the-ring-of-the-wizard-werdna-1)
   - [**Hero Status**](#hero-status)
   - [**Game Log**](#game-log)
-  - [**Summary and Aditional features**](#Summary and Aditional features)
+  - [**Summary and Aditional features**](#summary-and-aditional-features)
+    - [**Screen factor**](#screen-factor)
 
 ## **Scope**
 Main goal of the game is the hero to find the Ring the Wizard Werdna. To achieve this the hero searches a cave complex. Each cave is inhabited by hostile creatures ready to attack our hero. The ring is located at the tenth and final cave.
@@ -173,4 +174,9 @@ The game log is displayed in the lower left corner of the screen below the map s
 
 
 ## **Summary and Aditional features**
-This game will be used for the development of artificial inteligence (AI) agent. The agent will play the game from the Hero prespective.
+This game will be used to develop artificial intelligence (AI) agent. The agent will play the game from the perspective of the Hero. For this reason additional features were introduced. which will be detailed below.
+### **Screen factor**
+This feature is used to rescale the game screen, which is vital in order to keep the resources consumption (memory,CPU or GPU usage) low.The choises are the following
+- 3 which offer no rescale
+-  1 which shrinks the screen three times
+-  0.5 which shrinks the screen six times.
