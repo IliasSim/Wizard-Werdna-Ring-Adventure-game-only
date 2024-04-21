@@ -30,6 +30,9 @@ The code is written in python and creates a rogulike game.
     - [**Depiction**](#depiction)
     - [**Keyboard inputs**](#keyboard-inputs)
     - [**Seed and game version**](#seed-and-game-version)
+    - [**Pytorch or Tensorflow**](#pytorch-or-tensorflow)
+    - [**Frame Stack**](#frame-stack)
+    - [**Only screen input**](#only-screen-input)
 
 ## **Scope**
 Main goal of the game is the hero to find the Ring the Wizard Werdna. To achieve this the hero searches a cave complex. Each cave is inhabited by hostile creatures ready to attack our hero. The ring is located at the tenth and final cave.
@@ -189,6 +192,13 @@ This feature offers the option to show the game screen or not during agent train
 ### **Keyboard inputs**
 This feature determines whether the game will be played by a human via keyboard inputs or by an AI agent. The GamePAI class argument that defines it is "playHP" and Takes boolean values, "True" allows a human to play and "False" allows an AI agent to play.
 ### **Seed and game version**
-Generally, in a rogue-like game, every time a game starts, all aspects are randomly generated. The seed feature allows the same version of a game to be played. The GamePAI class argument that defines it is "seeded" and takes boolean values, "True" allows a specific version of the game to be played, "False" results in random game versions being generated. Even with the "seeded" argument to be "True"  is able to create several stable versions of the game. This is able through the GamePAI class argument "game" which take integer values. For example every time we start a game with "seeded" equal to "true" and "game" equal to 1 we will play the exact same game, if we choose "game" equal to two a new version of the game will be created, a version that we can replay every time we want, if the "seeded" is equal to "true" and the "game" equal to 2.
+Generally, in a rogue-like game, every time a game starts all aspects are randomly generated. The seed feature allows the same version of a game to be played. The GamePAI class argument that defines it is "seeded" and takes boolean values, "True" allows a specific version of the game to be played, "False" results in random game versions being generated. Even with the "seeded" argument set to "True" it is possible to create multiple stable versions of the game. This is possible through the GamePAI class argument "game" which takes integer values. For example, every time we start a game with "seeded" equal to "true" and "game" equal to 1 we will play exactly the same game. Setting "game" equal to 2 creates a new version of the game, one that we can replay whenever we want, if "seeded" equals "true" and "game" equals 2.
+### **Pytorch or Tensorflow**
+Each AI framework requires a different input shape for convolutional neural networks (CNNs), so the screen output shape from the GamePAI class's "playerAction" method must be different. The GamePAI class argument that defines which output is used is "torch" and takes boolean values, "True" reshapes the output to fit the pytorch CNN and "False" reshapes the output to fit the tensorflow CNN.
+### **Frame Stack**
+This feature allows screens from a game to be stacked one after the other. This is useful when recurrent neural networks (RNNs) are not used and allows the agent to understand the direction of movement. The GamePAI class argument that defines the number of frames to stack is "frame_stack" and takes integer values. The value we pass in the argument determines the number of screens to stack.
+### **Only screen input**
+The game presents information to the player through the game map where the game Hero, the item and the enemies are depicted. Also useful information are presented through the [**Game Log**](#game-log) and the 
+
  
 
