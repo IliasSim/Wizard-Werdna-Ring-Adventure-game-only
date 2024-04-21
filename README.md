@@ -33,6 +33,7 @@ The code is written in python and creates a rogulike game.
     - [**Pytorch or Tensorflow**](#pytorch-or-tensorflow)
     - [**Frame Stack**](#frame-stack)
     - [**Only screen input**](#only-screen-input)
+    - [**Gray Scale**](#gray-scale)
 
 ## **Scope**
 Main goal of the game is the hero to find the Ring the Wizard Werdna. To achieve this the hero searches a cave complex. Each cave is inhabited by hostile creatures ready to attack our hero. The ring is located at the tenth and final cave.
@@ -198,7 +199,9 @@ Each AI framework requires a different input shape for convolutional neural netw
 ### **Frame Stack**
 This feature allows screens from a game to be stacked one after the other. This is useful when recurrent neural networks (RNNs) are not used and allows the agent to understand the direction of movement. The GamePAI class argument that defines the number of frames to stack is "frame_stack" and takes integer values. The value we pass in the argument determines the number of screens to stack.
 ### **Only screen input**
-The game presents information to the player through the game map where the game Hero, the item and the enemies are depicted. Also useful information are presented through the [**Game Log**](#game-log) and the 
+The game presents information to the player through the game map where the game hero, items and enemies are depicted. Also useful information is presented via [**Game Log**](#game-log) and [**Hero Status**](#hero-status). There are two ways to pass all information during agent training, one is to shrink the game screen enough and then only pass it to a CNN, the other way is to only pass the map to a CNN and [**Game Log**](#game-log) and [**Hero Status**](#hero-status) separately in a linear or RNN, all inputs normalized to be between 0 and 1. The GamePAI class argument that defines whether the output will be a single screen image or a map screen image and two vectors is "only_cnn" and takes boolean values, "True" results in one screen output and "False" results in three output elements (map screen and two vectors).
+### **Gray Scale**
+This feature reduces the dimension of the external display. Converts RGB display to grayscale. The GamePAI class argument that defines whether the output screen will be in RGB or grayscale is "grey_scale" and takes boolean values, "True" converts the RGB screen to grayscale "False" leaves the screen in RGB.
 
  
 
