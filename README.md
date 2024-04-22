@@ -201,7 +201,7 @@ This feature allows screens from a game to be stacked one after the other. This 
 ### **Only screen input**
 The game presents information to the player through the game map where the game hero, items and enemies are depicted. Also useful information is presented via [**Game Log**](#game-log) and [**Hero Status**](#hero-status). There are two ways to pass all information during agent training, one is to shrink the game screen enough and then only pass it to a CNN, the other way is to only pass the map to a CNN and [**Game Log**](#game-log) and [**Hero Status**](#hero-status) separately in a linear or RNN, all inputs normalized to be between 0 and 1. The GamePAI class argument that defines whether the output will be a single screen image or a map screen image and two vectors is "only_cnn" and takes boolean values, "True" results in one screen output and "False" results in three output elements (map screen and two vectors).
 ### **Gray Scale**
-This feature reduces the dimension of the external display. Converts RGB display to grayscale. The GamePAI class argument that defines whether the output screen will be in RGB or grayscale is "grey_scale" and takes boolean values, "True" converts the RGB screen to grayscale "False" leaves the screen in RGB.
+This feature reduces the size of the output screen. Converts RGB  output screen to grayscale. The GamePAI class argument that defines whether the output screen will be in RGB or grayscale is "grey_scale" and takes boolean values, "True" converts the RGB screen to grayscale "False" leaves the screen in RGB.
 
  
 
