@@ -14,12 +14,13 @@ import numpy as np
 import gc
 import numpy as np
 import os
-#import tensorflow as tf
-eps = np.finfo(np.float32).eps.item()
+import cv2 
+from matplotlib import pyplot as plt
+eps = np.finfo(np.float16).eps.item()
 
 class GamePAI():
     '''GamePAi is a class that creates an instance of the game and initialize the basic features of the game.'''
-    def __init__(self,playerType,playerName,xPixel,yPixel,screenFactor,depict,game,playHP,seeded,agent_i):
+    def __init__(self,playerType,playerName,xPixel,yPixel,screenFactor,depict,game,playHP,seeded,torch,agent_i,frame_stack,only_cnn,gray_scale):
         self.agent_i = agent_i
         if agent_i<=4:
             x= 300*agent_i + 200
@@ -41,6 +42,9 @@ class GamePAI():
         self.total_reward = []
         self.buffer_size = 15
         self.killNo = 0
+        self.torch = torch
+        self.only_cnn = only_cnn
+        self.grayscale = gray_scale
         settings.screenFactor = screenFactor
         settings.mapWidth = int(self.xPixel/3)*screenFactor
         settings.mapHeigth = int(self.yPixel/3)*screenFactor
@@ -55,18 +59,30 @@ class GamePAI():
         self.rest = 0
         self.reward = 0
         #random.seed(seed)
-        #if self.screenFactor == 3:
+        if self.screenFactor == 3:
+            width_pading = 150
+            height_pading = 70
+        if self.screenFactor == 1:
+            width_pading = 72
+            height_pading = 32
+        if self.screenFactor == 0.5:
+            width_pading = 36
+            height_pading = 16
+        
         if depict == True:
-            self.screen = pygame.display.set_mode((settings.mapWidth+150, settings.mapHeigth+70))
+            self.screen = pygame.display.set_mode((int(settings.mapWidth+width_pading), int(settings.mapHeigth+height_pading)))
         if depict == False:
-            self.screen = pygame.Surface((settings.mapWidth+150, settings.mapHeigth+70))
+            self.screen = pygame.Surface((settings.mapWidth+width_pading, settings.mapHeigth+height_pading))
         #if self.screenFactor == 1:
             #if depict == True:
                 #self.screen = pygame.display.set_mode((settings.mapWidth+32, settings.mapHeigth+24))
             #if depict == False:
                 #self.screen = pygame.Surface((settings.mapWidth+32, settings.mapHeigth+24))
-        self.DrawMap = GameMapGraphics(self.screen)
+        self.gamegraphics = GameMapGraphics(self.screen)
         self.map = GameMap(self.seeded,self.seed)
+        if frame_stack >4:
+            frame_stack = 4
+        self.frame_stack = frame_stack
         pygame.init()         
         if not self.playHP:
             settings.enemies = []
@@ -144,14 +160,17 @@ class GamePAI():
             else:
                 pygame.display.set_caption("Wizard Werdna Ring "+str(game+1))
                 pygame.display.flip()
+        copy_list = self.copy_tiles()
+        copy_enemie_list = self.copy_enemis()
+        self.afterMoveDepiction(copy_list,copy_enemie_list,True)
         if playHP:
             self.run_gameHP()
 
-    def afterMoveDepiction(self):
+    def afterMoveDepiction(self,copy_list,copy_enemie_list,enter_cave):
         '''This function refreshes the information on the game screen'''
         self.printText()
         self.printPlayerStatus()
-        self.drawMap() 
+        self.drawscreen(copy_list,copy_enemie_list,enter_cave) 
 
     def gameOverHP(self):
         '''Checks if the player is dead and reinitilize the game creating a new instance of the GamePAI class.'''
@@ -166,9 +185,7 @@ class GamePAI():
         done = False
         if self.player.hitPoints <= 0:
             done = True
-            #self.reward -= 10
             settings.gameCount = settings.gameCount + 1
-            #print(self.player.name,'is dead. Game Over ' + str(settings.gameCount) + ' episode rewards ' + str(self.reward))
             pygame.quit()
             #sys.exit()
             if s % 100 == 0:
@@ -178,14 +195,17 @@ class GamePAI():
             gc.collect()
         return done
 
-    def drawMap(self):
+    def drawscreen(self,copy_list,copy_enemie_list,enter_cave):
         '''This function draws the map of the game'''
-        self.DrawMap.drawMap()
-        self.DrawMap.drawItem()
-        self.DrawMap.enemyDepiction()
-        self.DrawMap.drawPlayer(self.player.currentPositionX, self.player.currentPositionY)
-        # FramePerSec = pygame.time.Clock()
-        # FramePerSec.tick(30)
+        # tiles = settings.tiles.copy()
+        self.gamegraphics.drawMap(copy_list,self.frame_stack,enter_cave)
+        self.gamegraphics.drawItem()
+        self.gamegraphics.enemyDepiction(copy_enemie_list,self.frame_stack,enter_cave)
+        self.gamegraphics.drawPlayer(self.player.currentPositionX, self.player.currentPositionY,self.frame_stack,enter_cave)
+        # state = pygame.surfarray.array3d(self.screen)
+        # # avgs = [[(r*0.298 + g*0.587 + b*0.114) for (r,g,b) in col] for col in state]
+        # state = np.array([[[avg,avg,avg] for avg in col] for col in avgs])
+        # pygame.surfarray.make_surface(state)
         if self.depict == True:
             pygame.display.update()
 
@@ -233,7 +253,13 @@ class GamePAI():
 
     def printPlayerStatus(self):
         '''Prints the player name and status'''
-        font = pygame.font.Font("freesansbold.ttf", 12)
+        if self.screenFactor == 1:
+            font_int = 7
+        if self.screenFactor == 0.5:
+            font_int=3
+        if self.screenFactor == 3:
+            font_int = 12
+        font = pygame.font.Font("freesansbold.ttf", font_int)
         if isinstance(self.player, Warrior):
             text = font.render('Warrior', True, (255,0,0), (0,0,0))
         if isinstance(self.player, Wizard):
@@ -257,43 +283,121 @@ class GamePAI():
         text7 = font.render('Level: ' + str(self.player.getLevel()), True, (255,0,0), (0,0,0))
         text8 = font.render('XP: ' + str(self.player.experiencePoints), True, (255,0,0), (0,0,0)) 
         text9 = font.render('Cave: ' + str(self.cave), True, (255,0,0), (0,0,0))
-        self.screen.blit(text, (settings.mapWidth,8))
-        self.screen.blit(text1, (settings.mapWidth,21))
-        self.screen.blit(text2, (settings.mapWidth,34))
-        self.screen.blit(text25, (settings.mapWidth,47))
-        self.screen.blit(text3, (settings.mapWidth,60))
-        self.screen.blit(text4, (settings.mapWidth,73))
-        self.screen.blit(text5, (settings.mapWidth,86))
-        self.screen.blit(text6, (settings.mapWidth,99))
-        self.screen.blit(text7, (settings.mapWidth,112))
-        self.screen.blit(text8, (settings.mapWidth,125))
-        self.screen.blit(text9, (settings.mapWidth,138))
+        if self.screenFactor ==3:
+            self.screen.blit(text, (settings.mapWidth,8))
+            self.screen.blit(text1, (settings.mapWidth,21))
+            self.screen.blit(text2, (settings.mapWidth,34))
+            self.screen.blit(text25, (settings.mapWidth,47))
+            self.screen.blit(text3, (settings.mapWidth,60))
+            self.screen.blit(text4, (settings.mapWidth,73))
+            self.screen.blit(text5, (settings.mapWidth,86))
+            self.screen.blit(text6, (settings.mapWidth,99))
+            self.screen.blit(text7, (settings.mapWidth,112))
+            self.screen.blit(text8, (settings.mapWidth,125))
+            self.screen.blit(text9, (settings.mapWidth,138))
+        if self.screenFactor ==1:
+            self.screen.blit(text, (settings.mapWidth,8))
+            self.screen.blit(text1, (settings.mapWidth,17))
+            self.screen.blit(text2, (settings.mapWidth,26))
+            self.screen.blit(text25, (settings.mapWidth,35))
+            self.screen.blit(text3, (settings.mapWidth,44))
+            self.screen.blit(text4, (settings.mapWidth,53))
+            self.screen.blit(text5, (settings.mapWidth,62))
+            self.screen.blit(text6, (settings.mapWidth,71))
+            self.screen.blit(text7, (settings.mapWidth,80))
+            self.screen.blit(text8, (settings.mapWidth,89))
+            self.screen.blit(text9, (settings.mapWidth,98))
+        if self.screenFactor ==0.5:
+            self.screen.blit(text, (settings.mapWidth,8))
+            self.screen.blit(text1, (settings.mapWidth,14))
+            self.screen.blit(text2, (settings.mapWidth,20))
+            self.screen.blit(text25, (settings.mapWidth,26))
+            self.screen.blit(text3, (settings.mapWidth,32))
+            self.screen.blit(text4, (settings.mapWidth,38))
+            self.screen.blit(text5, (settings.mapWidth,44))
+            self.screen.blit(text6, (settings.mapWidth,50))
+            self.screen.blit(text7, (settings.mapWidth,56))
+            self.screen.blit(text8, (settings.mapWidth,62))
+            self.screen.blit(text9, (settings.mapWidth,68))
+
 
 
 
     def printText(self):
         '''Prints the game Log on the screen'''
-        font = pygame.font.Font('freesansbold.ttf', 12)
+        if self.screenFactor ==1:
+            font_int = 5
+            space_int = 6
+        if self.screenFactor ==0.5:
+            font_int = 3
+            space_int = 3
+        if self.screenFactor ==3:
+            font_int = 12
+            space_int = 13
+        font = pygame.font.Font('freesansbold.ttf', font_int)
         self.screen.fill(pygame.Color("black"))
         for i in range(len(settings.game_text)):
             text = font.render(settings.game_text[i], True, (255,0,0), (0,0,0))
-            self.screen.blit(text,(0,settings.mapHeigth+(13*i)))
+            self.screen.blit(text,(0,settings.mapHeigth+(space_int*i)))
     
-    def enemyMove(self):
+    def enemyMove(self,attacked_by_an_enemy):
         '''Determines the movement of the enemy after the movement of the player.'''
+        attacking_enemies = 0
         if settings.enemies != []:
+            
             for enemy in settings.enemies:
                 if enemy.minDistance(self.player,enemy.enemyCurrentPossitionX,enemy.enemyCurrentPossitionY) == 0:
-                    self.reward -= 1
+                    attacking_enemies += 1
+                    attacked_by_an_enemy = True
                 enemy.enemyMovement(self.player)
         if self.playHP:
             self.gameOverHP()
+        return attacked_by_an_enemy,attacking_enemies
 
-
+    def copy_tiles(self):
+        copy_list = [[0]*settings.ytile for i in range(settings.xtile)]
+        for y in range(settings.ytile):
+            for x in range(settings.xtile):
+                copy_list[x][y] = Tile(x,y)
+        for y in range(settings.ytile):
+            for x in range(settings.xtile):
+                if settings.tiles[x][y].ground == GameEnum.GroundType.wall:
+                    copy_list[x][y].ground = GameEnum.GroundType.wall
+                if settings.tiles[x][y].ground == GameEnum.GroundType.floor:
+                    copy_list[x][y].ground = GameEnum.GroundType.floor
+                if settings.tiles[x][y].ground == GameEnum.GroundType.stairs:
+                    copy_list[x][y].ground = GameEnum.GroundType.stairs
+                if settings.tiles[x][y].visibility == GameEnum.VisibilityType.unknown:
+                    copy_list[x][y].visibility = GameEnum.VisibilityType.unknown
+                if settings.tiles[x][y].visibility == GameEnum.VisibilityType.fogged:
+                    copy_list[x][y].visibility = GameEnum.VisibilityType.fogged
+                if settings.tiles[x][y].visibility == GameEnum.VisibilityType.visible:
+                    copy_list[x][y].visibility = GameEnum.VisibilityType.visible
+                if settings.tiles[x][y].occupancy == True:
+                    copy_list[x][y].occupancy = True
+                if settings.tiles[x][y].store != None:    
+                    item = settings.tiles[x][y].store
+                    copy_list[x][y].store = item
+        return copy_list
+    
+    def copy_enemis(self):
+        copy_enemie_list = []
+        for enemy in settings.enemies:
+            x,y = enemy.enemyCurrentPossitionX,enemy.enemyCurrentPossitionY
+            name    = enemy.name
+            copy_enemie_list.append([x,y,name])
+        return copy_enemie_list
 
     def playerAction(self,action):
         '''This function determines the actions of the player/agent.'''
         #the folling code determines the movement of the payer in the map.
+        move_new_area,vissible_stairs,move_already_discovered_area = False,False,False
+        move_towards_wall,pick_potion,attack_an_enemy,attack_aimlessly = False,False,False,False
+        Kill_an_enemy,use_rest_correctly,use_rest_aimlessly = False,False,False
+        use_health_potion_correctly,use_health_potion_aimlessly,use_mana_potion_correctly = False,False,False
+        use_mana_potion_aimlessly,enter_new_cave,pick_weapon,pick_weapon_aimlessly = False,False,False,False
+        attacked_by_an_enemy,win_game,gain_hp,gain_mp = False,False,False,False
+        attacking_enemies = 0
         self.reward = 0
         initialHitPoint = self.player.hitPoints
         if isinstance(self.player, Wizard):
@@ -316,21 +420,21 @@ class GamePAI():
                 self.steps += 1
                 # print(self.steps)
                 if unknownTille > self.map.countUknownTile():
-                    self.reward += 20
+                    move_new_area = True
                 else:
-                    self.reward -= 0
+                    move_already_discovered_area = True
                 if len(self.player.inventory) > inventory:
-                    self.reward += 100
+                    pick_potion = True
                 self.map.createEnemies(self.player,movementType,self.steps)
-                self.enemyMove()
-                self.enterCave(self.cave)
-                self.afterMoveDepiction()
+                attacked_by_an_enemy,attacking_enemies = self.enemyMove(attacked_by_an_enemy)
+                enter_new_cave,win_game = self.enterCave(self.cave,enter_new_cave,win_game)
+                # self.afterMoveDepiction()
                 if settings.tiles[settings.exitx][settings.exity].visibility == GameEnum.VisibilityType.visible:
-                    self.reward += 0
+                    vissible_stairs = True
             if Xposition == self.player.currentPositionX and Yposition == self.player.currentPositionY:
-                self.reward -= 5
-                self.enemyMove()  
-                self.afterMoveDepiction()   
+                move_towards_wall = True
+                attacked_by_an_enemy,attacking_enemies = self.enemyMove(attacked_by_an_enemy)  
+                # self.afterMoveDepiction()   
         if action == 4:
         #This code chunk adds 4 points to the hp of the player and if the player is wizzard type, adds and 4 point the mp of the player.'''
             oldhitpoints = self.player.hitPoints
@@ -341,26 +445,26 @@ class GamePAI():
             if settings.tiles[settings.exitx][settings.exity].visibility != GameEnum.VisibilityType.visible and settings.tiles[settings.exitx][settings.exity].visibility != GameEnum.VisibilityType.fogged:
                 self.player.rest()
                 self.map.createEnemiesRest(self.player,self.rest)
-                self.enemyMove()
-                self.afterMoveDepiction()
+                attacked_by_an_enemy,attacking_enemies = self.enemyMove(attacked_by_an_enemy)
+                # self.afterMoveDepiction()
             if  (abs(settings.exitx - self.player.currentPositionX) + abs(settings.exity - self.player.currentPositionY)) > 35 and settings.tiles[settings.exitx][settings.exity].visibility != GameEnum.VisibilityType.unknown:
                 self.player.rest()
                 self.map.createEnemiesRest(self.player,self.rest)
-                self.enemyMove()
-                self.afterMoveDepiction()
+                attacked_by_an_enemy,attacking_enemies = self.enemyMove(attacked_by_an_enemy)
+                # self.afterMoveDepiction()
             if (abs(settings.exitx - self.player.currentPositionX) + abs(settings.exity - self.player.currentPositionY)) < 35 and settings.tiles[settings.exitx][settings.exity].visibility != GameEnum.VisibilityType.unknown:
                 text =self.player.name + " don't try to cheat."
                 settings.addGameText(text)
-                self.afterMoveDepiction()
-            if (self.player.hitPoints - oldhitpoints) == 4 and self.countHealthPotion() == 0:
-                self.reward += 10
-            if (self.player.hitPoints - oldhitpoints) < 4 or self.countHealthPotion() == 0:
-                self.reward -= 0.1
+                # self.afterMoveDepiction()
+            if (self.player.hitPoints - oldhitpoints) == 4:# and self.countHealthPotion() == 0:
+                use_rest_correctly = True
+            if (self.player.hitPoints - oldhitpoints) == 0: # or self.countHealthPotion() == 0:
+                use_rest_aimlessly = True
             if isinstance(self.player, Wizard):
                 if  (self.player.manaPoints - oldmanapoints) == 4 and self.countManaPotion() == 0:
-                    self.reward += 10
+                    use_rest_correctly = True
                 if  (self.player.manaPoints - oldmanapoints) < 4 or self.countManaPotion() == 0:
-                    self.reward -= 0.1
+                    use_rest_aimlessly = True
 
         if action == 5:
         #This code chunk consumes one health potion and adds 20 point to the player hp.
@@ -374,22 +478,22 @@ class GamePAI():
                     oldhitpoints = self.player.hitPoints
                     self.player.use(item)           
                 if (self.player.hitPoints - oldhitpoints) == 20:
-                    self.reward += 10
+                    use_health_potion_correctly = True
                 if (self.player.hitPoints - oldhitpoints) < 20:
-                    self.reward -= 0.1
+                    use_health_potion_aimlessly = True
             else :
                 text = self.player.name + " doesn't posses health potion."
                 settings.addGameText(text)
-                self.reward -= 0.1
-            self.enemyMove()
-            self.afterMoveDepiction()
+                use_health_potion_aimlessly = True
+            attacked_by_an_enemy,attacking_enemies = self.enemyMove(attacked_by_an_enemy)
+            # self.afterMoveDepiction()
 
         if action == 6:
         #This code chunk consumes one mana potion and adds 20 points to the player mp, if the payer is a wizzard.
             if isinstance(self.player, Warrior):
                     text =self.player.name + " can't uses mana potion."
                     settings.addGameText(text)
-                    self.reward -= 0.1
+                    use_mana_potion_aimlessly = True
 
             if isinstance(self.player, Wizard) and self.player.inventory != []:
                 index = None          
@@ -401,32 +505,33 @@ class GamePAI():
                     oldmanapoints = self.player.manaPoints
                     self.player.use(item)
                 if  (self.player.manaPoints - oldmanapoints) == 20:
-                    self.reward += 10
+                    use_mana_potion_correctly = True
+                    
                 if  (self.player.manaPoints - oldmanapoints) < 20:
-                    self.reward -= 0.1
+                    use_mana_potion_aimlessly = True
                 if index == None:
                     text =self.player.name + " doesn't posses mana potion."
                     settings.addGameText(text)
-                    self.reward -= 0.1
+                    use_mana_potion_aimlessly = True
 
-            self.enemyMove()
-            self.afterMoveDepiction()   
+            attacked_by_an_enemy,attacking_enemies = self.enemyMove(attacked_by_an_enemy)
+            # self.afterMoveDepiction()   
                 
         if action == 7:
         #This code chunk performs the attack of the player.
             index = self.player.enemyToAttack()
             if index == None:
-                self.reward -= 1
+                attack_aimlessly = True
             if index != None:
                 enemy = settings.enemies[index]
                 boolean = self.player.attack(enemy)
                 if boolean:
-                    self.reward += 10
+                    attack_an_enemy = True
                 if boolean and enemy.hitPoints <= 0:
                     self.killNo += 1
                     self.additemRandom += 100
                     # print(self.additemRandom)
-                    self.reward += 100
+                    Kill_an_enemy = True
                     if self.seeded:
                         random.seed(self.additemRandom)
                     r = random.random()
@@ -450,8 +555,8 @@ class GamePAI():
                             if index != None:
                                 item = self.player.inventory.pop(index)
                                 self.player.use(item)
-            self.enemyMove()
-            self.afterMoveDepiction()
+            attacked_by_an_enemy,attacking_enemies = self.enemyMove(attacked_by_an_enemy)
+            # self.afterMoveDepiction()
 
         if action == 8:
             #This code chunk allows the player to pick weapon from the map.'''
@@ -462,29 +567,42 @@ class GamePAI():
                     settings.tiles[self.player.currentPositionX][self.player.currentPositionY].store = self.player.dropWeapon()
                     weaponPicked = True
                     self.player.setWeapon(sword)
-                    self.reward += 100
+                    pick_weapon = True
                 if isinstance(self.player, Wizard) and isinstance(settings.tiles[self.player.currentPositionX][self.player.currentPositionY].store, Staff):
                     staff = settings.tiles[self.player.currentPositionX][self.player.currentPositionY].store
                     settings.tiles[self.player.currentPositionX][self.player.currentPositionY].store = self.player.dropWeapon()
                     weaponPicked = True
                     self.player.setWeapon(staff)
-                    self.reward += 100
+                    pick_weapon = True
                 if not weaponPicked:
-                    self.reward -= 0.1
+                    pick_weapon_aimlessly =True
+                    
             else:
-                self.reward -= 0.1
-            self.enemyMove()
-            self.afterMoveDepiction()
-        if self.player.hitPoints <= 0:
-            self.reward -= 1
+                pick_weapon_aimlessly =True
+            attacked_by_an_enemy,attacking_enemies = self.enemyMove(attacked_by_an_enemy)
+            # self.afterMoveDepiction()
+        copy_list = self.copy_tiles()
+        copy_enemie_list = self.copy_enemis()
+        self.afterMoveDepiction(copy_list,copy_enemie_list,enter_new_cave)
         screen = self.screen
         state = pygame.surfarray.array3d(screen)
+        # print(state.shape)
         state = state.swapaxes(0,1)
-        state = state[:settings.mapHeigth,:settings.mapWidth]
-        state = state/255
-        state = np.reshape(state,(3,settings.mapHeigth,settings.mapWidth))
+        
+        if self.only_cnn:
+            state = state
+        else:
+            state = state[:int(settings.mapHeigth),:int(settings.mapWidth)]
+        # print(state.shape)
+        if self.grayscale:
+            state = cv2.cvtColor(state, cv2.COLOR_RGB2GRAY)
+            state = np.expand_dims(state, -1)
+        #print(state.shape)
+        
+
+        # state = state/255
+        # state = state.astype('float32')
         #state =  np.expand_dims(state, axis=0)
-        #std_reward = self.standardize_reward(self.reward)
         manapoints = 0
         maxmanapoints = 0
         manapotion = 0
@@ -501,56 +619,98 @@ class GamePAI():
         else :
             weaponencode = 0
         playerstatus = np.array([weaponencode,self.player.hitPoints/self.player.maxHitPoints,self.player.maxHitPoints/100,self.player.getAttackDamage()/45,self.countHealthPotion()/30,self.player.getLevel()/5,self.player.experiencePoints/14000,self.cave/10],dtype=np.float32)
+        # playerstatus = np.array([self.player.hitPoints,self.player.maxHitPoints,base_int_str,inteligence,manapoints,maxmanapoints,manapotion,self.countHealthPotion(),self.player.getAttackDamage(),self.player.getLevel()],dtype=np.int32)
+        # playerstatus = playerstatus/(max(playerstatus))
         textList = []
         for text in settings.game_text:
             textNname = text[len(self.player.name):]
             textList.append(textNname)        
-        #playerstatus = np.expand_dims(playerstatus, axis=0)
         textArray = self.gameVocab(textList)
-        #reward = self.standardize_reward(self.reward)
-        # if len(self.buffer_playerStatus) > self.buffer_size:
-            # del self.buffer_playerStatus[0]
-        # if len(self.buffer_playerStatus)<=self.buffer_size:
-            # for i in range(3-len(self.buffer_playerStatus)):
-                # self.buffer_playerStatus.append(playerstatus)
-        # self.buffer_playerStatus.append(playerstatus)
-        # array_playerStatus = np.array(self.buffer_playerStatus)
-        # print(array_playerStatus.shape)
-        # array_playerStatus = np.expand_dims(array_playerStatus, axis=0)
-
-        # if len(self.buffer_State) > self.buffer_size:
-            # del self.buffer_State[0]
-        # if len(self.buffer_State)<=self.buffer_size:
-            # for i in range(self.buffer_size-len(self.buffer_State)):
-                # self.buffer_State.append(state)
-        # self.buffer_State.append(state)
-        # array_state = np.array(self.buffer_State)
-        # array_state = np.expand_dims(array_state, axis=0)
-
-        # if len(self.buffer_text) > self.buffer_size:
-            # del self.buffer_text[0]
-        # if len(self.buffer_text)<=self.buffer_size:
-            # for i in range(3-len(self.buffer_text)):
-                # self.buffer_text.append(textArray)
-        # self.buffer_text.append(textArray)
-        # array_text = np.array(self.buffer_text)
-        # array_text = np.expand_dims(array_text, axis=0)
         done = False
         if self.player.hitPoints <= 0:
             done = True
         if initialHitPoint < self.player.hitPoints:
-            self.reward += 1
+            gain_hp = True
         if isinstance(self.player,Wizard):
             if initialManaPoints < self.player.manaPoints:
-                self.reward += 1
-        # print(np.array(self.buffer_text).shape)
-        # if len(self.buffer_reward) > self.buffer_size:
-            # del self.buffer_reward[0]
-        # print(self.reward)
-        # self.buffer_reward.append(self.reward)
-        # print(self.buffer_reward[len(self.buffer_reward)-1])
-        # print(self.buffer_reward)
-        return state, playerstatus,  textArray,self.reward, done
+                gain_mp = True
+        if self.torch:
+            state = np.reshape(state,(state.shape[2],state.shape[0],state.shape[1]))
+        self.rewards(move_new_area,vissible_stairs,move_already_discovered_area,move_towards_wall,
+                pick_potion,attack_an_enemy,attack_aimlessly,Kill_an_enemy,use_rest_correctly,use_rest_aimlessly,
+                use_health_potion_correctly,use_health_potion_aimlessly,use_mana_potion_correctly,
+                use_mana_potion_aimlessly,enter_new_cave,pick_weapon,pick_weapon_aimlessly,
+                attacked_by_an_enemy,win_game,gain_hp,gain_mp,attacking_enemies)
+        # print(state.shape)
+        if self.only_cnn:
+            return state, self.reward, done
+        else:
+            return state, self.reward, playerstatus,  textArray, done
+    
+    def rewards(self,move_new_area,vissible_stairs,move_already_discovered_area,move_towards_wall,
+                pick_potion,attack_an_enemy,attack_aimlessly,Kill_an_enemy,use_rest_correctly,use_rest_aimlessly,
+                use_health_potion_correctly,use_health_potion_aimlessly,use_mana_potion_correctly,
+                use_mana_potion_aimlessly,enter_new_cave,pick_weapon,pick_weapon_aimlessly,
+                attacked_by_an_enemy,win_game,gain_hp,gain_mp,attacking_enemies):
+        # movemen rewards
+        if move_new_area:
+            self.reward += 20
+        if vissible_stairs:
+            self.reward += 20
+        if move_already_discovered_area:
+            self.reward += 1
+        if move_towards_wall:
+            self.reward -= 1
+        if pick_potion:
+            self.reward += 100
+        # fight with enemy
+        if attack_an_enemy:
+            self.reward += 10
+        if attack_aimlessly:
+            self.reward -= 0.1
+        if Kill_an_enemy:
+            self.reward += 100
+        if attacked_by_an_enemy:
+            self.reward -= 1*attacking_enemies 
+        # use rest
+        if use_rest_aimlessly:
+            self.reward -= 0.1
+        if use_rest_correctly:
+            self.reward += 10
+        # use potion
+        if use_health_potion_correctly:
+            self.reward += 100
+        if use_health_potion_aimlessly:
+            self.reward -= 0.1
+        if use_mana_potion_correctly:
+            self.reward += 100
+        if use_mana_potion_aimlessly:
+            self.reward -= 0.1
+        # enter cave win game
+        if enter_new_cave or win_game:
+            self.reward += 500
+        # pick weapon
+        if pick_weapon:
+            self.reward += 100
+        if pick_weapon_aimlessly:
+            self.reward -= 0.1
+        # gain hp mp
+        if gain_hp:
+            self.reward += 10
+        if gain_mp:
+            self.reward += 1
+        if self.player.hitPoints <= 0:
+            self.reward -= 1
+        self.reward = np.float32(self.reward)
+
+        
+
+
+        
+
+
+        
+
 
     def gameVocab(self,textList):
         array = np.array([])
@@ -567,7 +727,7 @@ class GamePAI():
         'MP.':60,'found':61,'press':63,'use':64,'it.':65,'h':66,'m':67,'weapon':68,'type':69,'of':70,
         'p':71,'equip':72,'with':73,'add':74,'which':75,'add':76,'max':77,'HP':78,'MP':79,'player':80,'inteligence':81,
         'earn':82,'attack':83,'strength':84,'east.':85,'west.':86,'north.':87,'south.':89,'ring':90,'Mana':91,'this':92,'Gray':93,
-        'Amazing':94,'Deadly':95,'Ancient':96,'Sword':97,'Staff':98,'weapon.':99,'rest':101}
+        'Amazing':94,'Deadly':95,'Ancient':96,'Sword':97,'Staff':98,'weapon.':99,'rest':101,'Ettin':102}
         # this code chunk creates a sum input for the model.
         # text = textList[len(textList)-1]
         # text = text.split()
@@ -602,11 +762,12 @@ class GamePAI():
         #print(type(array))
         #tfarray = tf.convert_to_tensor(array)
         array = np.reshape(array,(125))
-        array = array/101
+        array = array/102
         #print(sumarray.shape,sumarray)
+        array = array.astype('float32')
         return array
 
-    def enterCave(self,cave):
+    def enterCave(self,cave,enter_new_cave,win_game):
         '''This function Checks if the tile is stair or the tile stores the Werdna Ring. 
         If the tile is stair the player enters a new cave if the tile posses the Werdna ring the player wins and the game ends.'''                
         if settings.tiles[self.player.currentPositionX][self.player.currentPositionY].ground == GameEnum.GroundType.stairs:
@@ -615,12 +776,13 @@ class GamePAI():
             settings.enemies = []
             text =self.player.name + " enters cave No " + str(cave + 1)
             settings.addGameText(text)
-            self.reward += 10000
+            enter_new_cave = True
+            
         if isinstance(settings.tiles[self.player.currentPositionX][self.player.currentPositionY].store, Werdna_Ring):
             print(self.player.name + " found Werdna's Ring!! Congratulation")
             pygame.quit()
-            self.reward += 10000
-            #sys.exit()
+            win_game = True
+        return enter_new_cave,win_game
                     
     def settingmapWidth(self):
         '''This function returns the pixels of the map x axis.'''
@@ -642,7 +804,6 @@ class GamePAI():
 
     def run_gameHP(self):
         '''Thru this function the player can play the game with the keyboard'''
-        self.drawMap()
         gameContinues = True
         while gameContinues:
             settings.reward = 0
@@ -675,15 +836,20 @@ class GamePAI():
     def initialGameState(self):
         '''Returns the intial state of the game'''
         #print(len(self.buffer_State),len(self.buffer_text),len(self.buffer_playerStatus))
-        self.drawMap()
         screen = self.screen
         state = pygame.surfarray.array3d(screen)
         state = state.swapaxes(0,1)
-        state = state[:settings.mapHeigth,:settings.mapWidth]
-        state = np.reshape(state,(3,settings.mapHeigth,settings.mapWidth))
-        state = state/255
-        #state =  np.expand_dims(state, axis=0)
-        #std_reward = self.standardize_reward(self.reward)
+        # print(state1.shape,state.shape)
+        if self.only_cnn:
+            state = state
+        else:
+            state = state[:int(settings.mapHeigth),:int(settings.mapWidth)]
+        #state = state/255
+        if self.grayscale:
+            state = cv2.cvtColor(state, cv2.COLOR_RGB2GRAY)
+            state = np.expand_dims(state, -1)
+
+        # state = state.astype('float32')
         manapoints = 0
         maxmanapoints = 0
         manapotion = 0
@@ -705,38 +871,15 @@ class GamePAI():
             textNname = text[len(self.player.name):]
             textList.append(textNname)
         textArray = self.gameVocab(textList)
-
-        # if len(self.buffer_playerStatus)<=self.buffer_size:
-            # for i in range(self.buffer_size-len(self.buffer_playerStatus)):
-                # self.buffer_playerStatus.append(playerstatus)
-        # self.buffer_playerStatus.append(playerstatus)
-        # array_playerStatus = np.array(self.buffer_playerStatus)
-        # array_playerStatus = np.expand_dims(array_playerStatus, axis=0)
-        # if len(self.buffer_State)<=self.buffer_size:
-            # for i in range(self.buffer_size-len(self.buffer_State)):
-                # self.buffer_State.append(state)
-        # self.buffer_State.append(state)
-        # array_state = np.array(self.buffer_State)
-        # array_state = np.expand_dims(array_state, axis=0)
-
-        # if len(self.buffer_text)<=self.buffer_size:
-            # for i in range(self.buffer_size-len(self.buffer_text)):
-                # self.buffer_text.append(textArray)
-        # self.buffer_text.append(textArray)
-        # array_text = np.array(self.buffer_text)
-        # array_text = np.expand_dims(array_text, axis=0)
-
-        
-        #textArray = np.expand_dims(textArray, axis=0)
-        return state, playerstatus, textArray
-    
-    def gameOver_pytorch(self):
-        '''Quit game for pytorch script'''
-        pygame.quit()
-        gc.collect()
+        if self.torch:
+            state = np.reshape(state,(state.shape[2],state.shape[0],state.shape[1]))
+        if self.only_cnn:
+            return state
+        else:
+            return state, playerstatus,  textArray
 
 
 
 if __name__ == '__main__':
-    game = GamePAI(1,'Connan',444,444,3,True,0,True,True,0)
+    game = GamePAI(1,'Connan',444,444,0.5,True,1,True,True,False,0,1,True,True)
     
